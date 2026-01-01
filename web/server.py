@@ -453,8 +453,18 @@ async def api_lstm(code: str, train: bool = False):
         stock_service = get_stock_service()
         info = stock_service.get_stock_info(code)
 
-        # 모델이 없거나 학습 요청시 학습
-        if train or not predictor.has_model(code):
+        # 모델 로드 또는 학습
+        trained = False
+        need_train = train or not predictor.has_model(code)
+
+        # 기존 모델이 있으면 로드 시도
+        if not need_train:
+            if not predictor.load_model(code):
+                print(f"[LSTM Analyze] {code} 모델 로드 실패, 재학습 필요")
+                need_train = True
+
+        # 학습 필요시 학습
+        if need_train:
             end_date = datetime.now()
             start_date = end_date - timedelta(days=365)
             df = krx.get_market_ohlcv(
@@ -467,12 +477,11 @@ async def api_lstm(code: str, train: bool = False):
                 return {"error": "데이터가 부족합니다 (최소 100일 필요)", "code": code}
 
             # 학습
+            print(f"[LSTM Analyze] {code} 학습 시작 (데이터: {len(df)}일)")
             history = predictor.train(df, epochs=30)
             predictor.save_model(code)
+            print(f"[LSTM Analyze] {code} 학습 완료")
             trained = True
-        else:
-            predictor.load_model(code)
-            trained = False
 
         # 예측을 위한 최근 데이터
         end_date = datetime.now()
