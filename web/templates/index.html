@@ -478,15 +478,15 @@
                 </div>
             </div>
             <div class="detail-tabs">
-                <div class="detail-tab active" data-detail="quote">시세</div>
+                <div class="detail-tab" data-detail="quote">시세</div>
                 <div class="detail-tab" data-detail="chart">차트</div>
                 <div class="detail-tab" data-detail="lstm">LSTM</div>
                 <div class="detail-tab" data-detail="news">뉴스</div>
             </div>
-            <div id="quoteSection" class="card"></div>
-            <div id="chartSection" class="card hidden"><div class="chart-container"><canvas id="stockChart"></canvas></div></div>
-            <div id="lstmSection" class="card hidden"></div>
-            <div id="newsSection" class="card hidden"></div>
+            <div id="quoteSection" class="card hidden"><div class="empty-state"><div class="empty-icon">👆</div>위 메뉴를 선택하세요</div></div>
+            <div id="chartSection" class="card hidden"><div class="empty-state"><div class="empty-icon">👆</div>위 메뉴를 선택하세요</div></div>
+            <div id="lstmSection" class="card hidden"><div class="empty-state"><div class="empty-icon">👆</div>위 메뉴를 선택하세요</div></div>
+            <div id="newsSection" class="card hidden"><div class="empty-state"><div class="empty-icon">👆</div>위 메뉴를 선택하세요</div></div>
         </div>
     </div>
 
@@ -742,8 +742,28 @@
             currentName = name;
             document.getElementById('detailName').textContent = name;
             document.getElementById('detailCode').textContent = code;
+
+            // 모든 섹션 초기화
+            resetDetailSections();
+
+            // 탭 초기화 (모두 비활성)
+            document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+
             showDetailSection();
-            loadQuote();
+        }
+
+        function resetDetailSections() {
+            const defaultMsg = '<div class="empty-state"><div class="empty-icon">👆</div>위 메뉴를 선택하세요</div>';
+            document.getElementById('quoteSection').innerHTML = defaultMsg;
+            document.getElementById('chartSection').innerHTML = defaultMsg;
+            document.getElementById('lstmSection').innerHTML = defaultMsg;
+            document.getElementById('newsSection').innerHTML = defaultMsg;
+
+            // 모든 섹션 숨김
+            document.getElementById('quoteSection').classList.add('hidden');
+            document.getElementById('chartSection').classList.add('hidden');
+            document.getElementById('lstmSection').classList.add('hidden');
+            document.getElementById('newsSection').classList.add('hidden');
         }
 
         function showConditionSection() {
