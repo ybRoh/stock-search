@@ -746,10 +746,13 @@
             // 모든 섹션 초기화
             resetDetailSections();
 
-            // 탭 초기화 (모두 비활성)
+            // 시세 탭 활성화 (기본값)
             document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('.detail-tab[data-detail="quote"]').classList.add('active');
+            document.getElementById('quoteSection').classList.remove('hidden');
 
             showDetailSection();
+            loadQuote();
         }
 
         function resetDetailSections() {
@@ -831,9 +834,15 @@
         }
 
         async function loadChart() {
+            const section = document.getElementById('chartSection');
+            section.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
             try {
                 const res = await fetch(`/api/chart/${currentCode}?period=3m`);
                 const data = await res.json();
+
+                // 차트 컨테이너 생성
+                section.innerHTML = '<div class="chart-container"><canvas id="stockChart"></canvas></div>';
+
                 if (stockChart) stockChart.destroy();
                 stockChart = new Chart(document.getElementById('stockChart').getContext('2d'), {
                     type: 'line',
@@ -843,7 +852,10 @@
                     },
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 6 } }, y: { ticks: { callback: v => v.toLocaleString() } } } }
                 });
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                console.error(e);
+                section.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div>차트 로딩 오류</div>';
+            }
         }
 
         async function loadNews() {
