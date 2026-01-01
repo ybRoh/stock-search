@@ -49,6 +49,21 @@ async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
+@app.get("/api/ngrok-url")
+async def api_ngrok_url():
+    """현재 ngrok URL 반환"""
+    try:
+        import requests as req
+        resp = req.get("http://localhost:4040/api/tunnels", timeout=2)
+        data = resp.json()
+        for tunnel in data.get("tunnels", []):
+            if tunnel.get("proto") == "https":
+                return {"url": tunnel.get("public_url"), "status": "running"}
+        return {"url": None, "status": "no_https_tunnel"}
+    except:
+        return {"url": None, "status": "ngrok_not_running"}
+
+
 @app.get("/api/search")
 async def api_search(keyword: str, market: str = "ALL"):
     """종목 검색 API"""

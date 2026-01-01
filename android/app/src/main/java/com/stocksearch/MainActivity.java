@@ -8,10 +8,13 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebResourceRequest;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -107,7 +110,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadServer() {
         progressBar.setVisibility(View.VISIBLE);
-        webView.loadUrl(serverUrl);
+        // ngrok 무료 버전 경고 페이지 우회를 위한 헤더 추가
+        Map<String, String> headers = new HashMap<>();
+        headers.put("ngrok-skip-browser-warning", "true");
+        webView.loadUrl(serverUrl, headers);
     }
 
     @Override
