@@ -698,9 +698,9 @@
                     </div>
                     ${lstm ? `
                     <div class="lstm-prediction">
-                        <div class="lstm-direction up">📈 상승</div>
+                        <div class="lstm-direction ${lstm.direction === '상승' ? 'up' : 'down'}">${lstm.direction === '상승' ? '📈' : '📉'} ${lstm.direction}</div>
                         <div class="lstm-confidence">신뢰도: ${lstm.confidence}%</div>
-                        <div class="lstm-signal buy">${lstm.signal}</div>
+                        <div class="lstm-signal ${lstm.signal === '매수' ? 'buy' : 'sell'}">${lstm.signal}</div>
                     </div>
                     ` : ''}
                 </div>`;
@@ -729,9 +729,9 @@
                         <div style="font-size: 0.8rem; color: var(--text-muted);">${stock.price ? stock.price.toLocaleString() + '원' : ''}</div>
                     </div>
                     <div class="lstm-prediction">
-                        <div class="lstm-direction up">📈 상승</div>
+                        <div class="lstm-direction ${stock.direction === '상승' ? 'up' : 'down'}">${stock.direction === '상승' ? '📈' : '📉'} ${stock.direction}</div>
                         <div class="lstm-confidence">신뢰도: ${stock.confidence}%</div>
-                        <div class="lstm-signal buy">${stock.signal}</div>
+                        <div class="lstm-signal ${stock.signal === '매수' ? 'buy' : 'sell'}">${stock.signal}</div>
                     </div>
                 </div>
             `).join('');
