@@ -18,7 +18,14 @@ import csv
 from services.stock_data import get_stock_service
 from services.news_service import get_news_service
 from screener.formula import get_formula_manager
-from models.lstm_predictor import get_predictor, StockPredictor
+
+# LSTM은 torch가 없으면 비활성화
+try:
+    from models.lstm_predictor import get_predictor, StockPredictor
+    LSTM_AVAILABLE = True
+except ImportError:
+    LSTM_AVAILABLE = False
+    print("Warning: PyTorch not available, LSTM features disabled")
 
 
 app = FastAPI(title="주식 검색기", version="1.0.0")
@@ -420,6 +427,9 @@ async def api_info(code: str):
 @app.get("/api/lstm/analyze/{code}")
 async def api_lstm(code: str, train: bool = False):
     """LSTM 예측 분석 API (단일 종목)"""
+    if not LSTM_AVAILABLE:
+        return {"error": "LSTM 기능을 사용할 수 없습니다 (PyTorch 미설치)"}
+
     from datetime import datetime, timedelta
     from pykrx import stock as krx
 
@@ -477,6 +487,9 @@ async def api_lstm(code: str, train: bool = False):
 @app.get("/api/lstm/batch")
 async def api_lstm_batch(codes: str, bullish_only: bool = False):
     """여러 종목 LSTM 분석 API"""
+    if not LSTM_AVAILABLE:
+        return {"error": "LSTM 기능을 사용할 수 없습니다 (PyTorch 미설치)", "results": []}
+
     from datetime import datetime, timedelta
     from pykrx import stock as krx
 
@@ -575,6 +588,9 @@ async def api_lstm_batch(codes: str, bullish_only: bool = False):
 @app.get("/api/lstm/screen")
 async def api_lstm_screen(min_confidence: float = 55.0, limit: int = 20):
     """LSTM 상승 예측 종목 스크리닝 API"""
+    if not LSTM_AVAILABLE:
+        return {"error": "LSTM 기능을 사용할 수 없습니다 (PyTorch 미설치)", "results": []}
+
     from datetime import datetime, timedelta
     from pykrx import stock as krx
 
