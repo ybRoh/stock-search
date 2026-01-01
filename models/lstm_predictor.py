@@ -281,10 +281,11 @@ class StockPredictor:
         """모델 로드"""
         path = os.path.join(self.model_dir, f"lstm_{code}.pt")
         if not os.path.exists(path):
+            print(f"[LSTM] {code} 모델 파일 없음: {path}")
             return False
 
         try:
-            checkpoint = torch.load(path, map_location=self.device)
+            checkpoint = torch.load(path, map_location=self.device, weights_only=False)
             self.scaler = checkpoint["scaler"]
             self.sequence_length = checkpoint["sequence_length"]
             self.hidden_size = checkpoint["hidden_size"]
@@ -297,8 +298,10 @@ class StockPredictor:
             ).to(self.device)
             self.model.load_state_dict(checkpoint["model_state_dict"])
             self.model.eval()
+            print(f"[LSTM] {code} 모델 로드 성공")
             return True
-        except:
+        except Exception as e:
+            print(f"[LSTM] {code} 모델 로드 에러: {e}")
             return False
 
     def has_model(self, code: str) -> bool:
