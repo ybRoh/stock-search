@@ -28,7 +28,10 @@ templates_dir = os.path.join(os.path.dirname(__file__), "templates")
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 
 templates = Jinja2Templates(directory=templates_dir)
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+# static 폴더가 있을 때만 마운트
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
 # ============ API 엔드포인트 ============
