@@ -1,0 +1,73 @@
+============================================
+  Oracle Cloud 배포 가이드
+============================================
+
+[수동으로 해야 할 것 - 웹에서]
+============================================
+
+1. Oracle Cloud 가입 (10분)
+   - https://cloud.oracle.com 접속
+   - 이메일, 전화번호, 신용카드 필요
+   - Home Region: South Korea (Chuncheon) 선택
+
+2. VM 인스턴스 생성 (5분)
+   - 메뉴 > Compute > Instances > Create Instance
+
+   설정:
+   - Name: stock-search-server
+   - Image: Ubuntu 22.04 (추천) 또는 Oracle Linux 8
+   - Shape: VM.Standard.E2.1.Micro (Always Free)
+   - SSH Key: "Generate key pair" 선택 후 다운로드
+
+3. 네트워크 보안 규칙 추가 (2분)
+   - 인스턴스 클릭 > Primary VNIC > Subnet 클릭
+   - Security Lists > Default Security List
+   - Add Ingress Rules:
+     * Source CIDR: 0.0.0.0/0
+     * Destination Port: 8000
+     * Description: Stock Search
+
+4. Public IP 메모 (인스턴스 상세 페이지에서 확인)
+
+
+[자동으로 되는 것 - 스크립트로]
+============================================
+
+1. PC에서 파일 업로드
+   $ cd /home/ybr/stock_search
+   $ bash deploy/upload-to-cloud.sh <서버IP> <SSH키경로>
+
+2. 서버에서 설정 실행
+   $ ssh -i <SSH키> ubuntu@<서버IP>
+   $ cd ~/stock_search && bash deploy/setup-oracle.sh
+
+완료! 안드로이드 앱에서 http://<서버IP>:8000 접속
+
+
+[문제 해결]
+============================================
+
+Q: 접속이 안됩니다
+A: Oracle Cloud 콘솔에서 Security List에 포트 8000이 열렸는지 확인
+
+Q: 서비스가 시작 안됩니다
+A: sudo systemctl status stock-search 로 로그 확인
+
+Q: 모듈 import 에러
+A: pip install <모듈명> 으로 추가 설치
+
+
+[유용한 명령어]
+============================================
+
+# 서비스 상태
+sudo systemctl status stock-search
+
+# 서비스 재시작
+sudo systemctl restart stock-search
+
+# 로그 보기
+sudo journalctl -u stock-search -f
+
+# 서비스 중지
+sudo systemctl stop stock-search

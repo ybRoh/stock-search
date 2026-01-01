@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>주식 검색기</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #2563eb;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: 70px;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 12px; }
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 12px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        header h1 { font-size: 1.1rem; font-weight: 700; }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            padding: 6px 0;
+            z-index: 100;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 6px 16px;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+        .nav-item.active { color: var(--primary); }
+        .nav-item svg { width: 20px; height: 20px; margin-bottom: 2px; }
+        .section-title { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+        .card {
+            background: var(--card);
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        .card-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; }
+
+        /* 검색 입력 영역 */
+        .search-box {
+            background: var(--card);
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            margin-bottom: 10px;
+        }
+        .search-input-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+        .search-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+        .search-input:focus { border-color: var(--primary); }
+        .search-btn {
+            padding: 10px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .selected-conditions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            min-height: 24px;
+        }
+        .condition-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 3px 8px;
+            background: var(--primary);
+            color: white;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+        .condition-tag .remove {
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 2px;
+        }
+
+        /* 검색 모드 선택 - 작게 */
+        .search-mode {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 6px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            background: white;
+            font-size: 0.75rem;
+            cursor: pointer;
+            text-align: center;
+        }
+        .mode-btn.active {
+            border-color: var(--primary);
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* 조건 카드 - 최소화 */
+        .condition-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .condition-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: transform 0.2s;
+        }
+        .condition-chip:hover {
+            transform: scale(1.02);
+        }
+        .condition-chip.selected {
+            outline: 2px solid #fbbf24;
+            outline-offset: 1px;
+        }
+        .condition-chip:nth-child(2) { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .condition-chip:nth-child(3) { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .condition-chip:nth-child(4) { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .condition-chip:nth-child(5) { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .condition-chip:nth-child(6) { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: var(--text); }
+        .condition-chip:nth-child(7) { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: var(--text); }
+        .condition-chip:nth-child(8) { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: var(--text); }
+        .chip-icon { font-size: 0.9rem; }
+        .condition-chip.lstm-special {
+            background: linear-gradient(135deg, #667eea 0%, #f093fb 50%, #764ba2 100%);
+            animation: gradient-shift 3s ease infinite;
+            background-size: 200% 200%;
+        }
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .condition-chip.cap-chip {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            font-size: 0.75rem;
+        }
+
+        /* 검색 결과 */
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .results-count { font-size: 0.85rem; color: var(--text-muted); }
+        .stock-list { display: flex; flex-direction: column; gap: 6px; max-height: 400px; overflow-y: auto; }
+        .stock-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: var(--bg);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .stock-item:hover { background: #e2e8f0; }
+        .stock-name { font-weight: 600; font-size: 0.9rem; }
+        .stock-code { color: var(--text-muted); font-size: 0.8rem; }
+        .stock-price { text-align: right; }
+        .stock-current { font-weight: 700; font-size: 0.9rem; }
+        .stock-change { font-size: 0.8rem; font-weight: 600; }
+        .stock-change.up { color: var(--danger); }
+        .stock-change.down { color: var(--primary); }
+        .stock-market {
+            padding: 2px 5px;
+            background: var(--primary);
+            color: white;
+            border-radius: 4px;
+            font-size: 0.6rem;
+            margin-left: 4px;
+        }
+
+        /* 상세 뷰 */
+        .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .back-btn {
+            padding: 6px;
+            background: var(--bg);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .detail-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 6px;
+        }
+        .detail-tab {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        .detail-tab.active {
+            color: var(--primary);
+            background: rgba(37, 99, 235, 0.1);
+        }
+        .quote-main { text-align: center; padding: 16px 0; }
+        .quote-price { font-size: 1.8rem; font-weight: 700; }
+        .quote-change { font-size: 0.95rem; font-weight: 600; margin-top: 4px; }
+        .quote-change.up { color: var(--danger); }
+        .quote-change.down { color: var(--primary); }
+        .quote-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+        .quote-item { display: flex; justify-content: space-between; padding: 8px; background: var(--bg); border-radius: 6px; }
+        .quote-label { color: var(--text-muted); font-size: 0.8rem; }
+        .quote-value { font-weight: 600; font-size: 0.85rem; }
+        .chart-container { height: 220px; }
+        .news-item { padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .news-item:last-child { border-bottom: none; }
+        .news-title { font-weight: 500; font-size: 0.9rem; margin-bottom: 3px; line-height: 1.3; }
+        .news-meta { font-size: 0.75rem; color: var(--text-muted); }
+        .loading { text-align: center; padding: 30px; color: var(--text-muted); }
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .hidden { display: none !important; }
+        .empty-state { text-align: center; padding: 30px 16px; color: var(--text-muted); }
+        .empty-icon { font-size: 2rem; margin-bottom: 8px; }
+
+        /* LSTM 분석 */
+        .lstm-btn {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .lstm-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .export-btn {
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .export-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .lstm-results {
+            margin-top: 12px;
+        }
+        .lstm-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: var(--bg);
+            border-radius: 8px;
+            margin-bottom: 6px;
+        }
+        .lstm-stock-info {
+            flex: 1;
+        }
+        .lstm-prediction {
+            text-align: right;
+        }
+        .lstm-direction {
+            font-size: 1rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 16px;
+        }
+        .lstm-direction.up {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--danger);
+        }
+        .lstm-direction.down {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary);
+        }
+        .lstm-confidence {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .lstm-signal {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        .lstm-signal.buy { color: var(--danger); }
+        .lstm-signal.sell { color: var(--primary); }
+        .detail-lstm {
+            text-align: center;
+            padding: 20px;
+        }
+        .lstm-big-direction {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        .lstm-big-direction.up { color: var(--danger); }
+        .lstm-big-direction.down { color: var(--primary); }
+        .lstm-prob-bar {
+            height: 20px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary) var(--prob), var(--danger) var(--prob), var(--danger) 100%);
+            border-radius: 10px;
+            margin: 16px 0;
+            position: relative;
+        }
+        .lstm-prob-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .lstm-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .lstm-info-item {
+            background: var(--bg);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .lstm-info-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .lstm-info-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <header><h1>주식 검색기</h1></header>
+
+    <div class="container">
+        <!-- 조건검색 Section -->
+        <div id="conditionSection">
+            <!-- 검색 영역 -->
+            <div class="search-box">
+                <div class="search-input-row">
+                    <input type="text" id="searchInput" class="search-input" placeholder="종목명 또는 종목코드" autocomplete="off">
+                    <button class="search-btn" onclick="executeSearch()">검색</button>
+                </div>
+                <div id="selectedConditions" class="selected-conditions"></div>
+            </div>
+
+            <!-- 검색 모드 선택 -->
+            <div class="search-mode">
+                <div class="mode-btn active" data-mode="and" onclick="setSearchMode('and')">
+                    <strong>AND</strong> 모든조건
+                </div>
+                <div class="mode-btn" data-mode="or" onclick="setSearchMode('or')">
+                    <strong>OR</strong> 하나라도
+                </div>
+            </div>
+
+            <!-- 검색 조건 - 칩 형태 -->
+            <div class="card">
+                <div class="card-title">검색 조건 (복수 선택)</div>
+                <div class="condition-grid" id="conditionList"></div>
+                <div class="card-title" style="margin-top: 12px;">📊 시가총액 조건</div>
+                <div class="condition-grid" id="capConditionList"></div>
+            </div>
+
+            <!-- 검색 결과 -->
+            <div id="resultsCard" class="card">
+                <div class="results-header">
+                    <div class="card-title" id="resultsTitle">검색 결과</div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div class="results-count" id="resultsCount">0개</div>
+                        <button class="lstm-btn" id="lstmAnalyzeBtn" onclick="analyzeLstmBatch()" disabled>
+                            🧠 LSTM
+                        </button>
+                        <button class="export-btn" id="exportBtn" onclick="exportResults()" disabled>
+                            📥 내보내기
+                        </button>
+                    </div>
+                </div>
+                <div id="searchResults" class="stock-list">
+                    <div class="empty-state"><div class="empty-icon">🔍</div>조건을 선택하고 검색하세요</div>
+                </div>
+                <div id="lstmResults" class="lstm-results hidden"></div>
+            </div>
+        </div>
+
+        <!-- 종목 상세 Section -->
+        <div id="detailSection" class="hidden">
+            <div class="detail-header">
+                <button class="back-btn" onclick="showConditionSection()">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                </button>
+                <div>
+                    <div id="detailName" style="font-weight: 700; font-size: 1rem;"></div>
+                    <div id="detailCode" style="color: var(--text-muted); font-size: 0.8rem;"></div>
+                </div>
+            </div>
+            <div class="detail-tabs">
+                <div class="detail-tab active" data-detail="quote">시세</div>
+                <div class="detail-tab" data-detail="chart">차트</div>
+                <div class="detail-tab" data-detail="lstm">LSTM</div>
+                <div class="detail-tab" data-detail="news">뉴스</div>
+            </div>
+            <div id="quoteSection" class="card"></div>
+            <div id="chartSection" class="card hidden"><div class="chart-container"><canvas id="stockChart"></canvas></div></div>
+            <div id="lstmSection" class="card hidden"></div>
+            <div id="newsSection" class="card hidden"></div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" data-nav="condition" onclick="showConditionSection()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <span>조건검색</span>
+        </div>
+        <div class="nav-item" data-nav="detail" onclick="showDetailIfSelected()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+            </svg>
+            <span>종목상세</span>
+        </div>
+    </div>
+
+    <script>
+        let currentCode = '';
+        let currentName = '';
+        let stockChart = null;
+        let selectedConditions = [];
+        let searchMode = 'and';
+
+        const conditions = [
+            { id: 'lstm_bullish', name: 'LSTM 상승예측', icon: '🧠', special: true },
+            { id: 'rsi_oversold', name: 'RSI 과매도', icon: '📉' },
+            { id: 'volume_surge', name: '거래량 급증', icon: '📊' },
+            { id: 'macd_buy', name: 'MACD 매수', icon: '📈' },
+            { id: 'bollinger_low', name: '볼린저 하단', icon: '🎯' },
+            { id: 'high_dividend', name: '고배당주', icon: '💰' },
+            { id: 'rising_stocks', name: '급등주', icon: '🚀' }
+        ];
+
+        const capConditions = [
+            { id: 'cap_1000_3000', name: '1000~3000억', icon: '💰' },
+            { id: 'cap_over_3000', name: '3000억 이상', icon: '💰' }
+        ];
+
+        const allConditions = [...conditions, ...capConditions];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderConditions();
+            updateSelectedDisplay();
+        });
+
+        function renderConditions() {
+            document.getElementById('conditionList').innerHTML = conditions.map(c => `
+                <div class="condition-chip ${c.special ? 'lstm-special' : ''}" data-id="${c.id}" onclick="toggleCondition('${c.id}')">
+                    <span class="chip-icon">${c.icon}</span>
+                    <span>${c.name}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('capConditionList').innerHTML = capConditions.map(c => `
+                <div class="condition-chip cap-chip" data-id="${c.id}" onclick="toggleCondition('${c.id}')">
+                    <span class="chip-icon">${c.icon}</span>
+                    <span>${c.name}</span>
+                </div>
+            `).join('');
+        }
+
+        function toggleCondition(conditionId) {
+            const chip = document.querySelector(`.condition-chip[data-id="${conditionId}"]`);
+            const idx = selectedConditions.indexOf(conditionId);
+
+            if (idx > -1) {
+                selectedConditions.splice(idx, 1);
+                chip.classList.remove('selected');
+            } else {
+                selectedConditions.push(conditionId);
+                chip.classList.add('selected');
+            }
+            updateSelectedDisplay();
+        }
+
+        function updateSelectedDisplay() {
+            const container = document.getElementById('selectedConditions');
+            if (selectedConditions.length === 0) {
+                container.innerHTML = '<span style="color: var(--text-muted); font-size: 0.8rem;">조건을 선택하세요</span>';
+                return;
+            }
+
+            container.innerHTML = selectedConditions.map(id => {
+                const c = allConditions.find(x => x.id === id);
+                if (!c) return '';
+                return `<span class="condition-tag">${c.icon} ${c.name} <span class="remove" onclick="event.stopPropagation(); removeCondition('${id}')">×</span></span>`;
+            }).join('');
+        }
+
+        function removeCondition(conditionId) {
+            const idx = selectedConditions.indexOf(conditionId);
+            if (idx > -1) {
+                selectedConditions.splice(idx, 1);
+                const chip = document.querySelector(`.condition-chip[data-id="${conditionId}"]`);
+                if (chip) chip.classList.remove('selected');
+                updateSelectedDisplay();
+            }
+        }
+
+        function setSearchMode(mode) {
+            searchMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+        }
+
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') executeSearch();
+        });
+
+        async function executeSearch() {
+            const keyword = document.getElementById('searchInput').value.trim();
+
+            if (selectedConditions.length === 0 && !keyword) {
+                alert('검색어를 입력하거나 조건을 선택하세요');
+                return;
+            }
+
+            if (keyword && selectedConditions.length === 0) {
+                await searchByKeyword(keyword);
+            } else {
+                await searchByConditions();
+            }
+        }
+
+        async function searchByKeyword(keyword) {
+            document.getElementById('resultsTitle').textContent = '검색: ' + keyword;
+            const resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>검색 중...</div>';
+
+            try {
+                const res = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}`);
+                const data = await res.json();
+                displayResults(data.results, false);
+            } catch (e) {
+                resultsDiv.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div>오류가 발생했습니다</div>';
+            }
+        }
+
+        async function searchByConditions() {
+            const conditionNames = selectedConditions.map(id => {
+                const c = allConditions.find(x => x.id === id);
+                return c ? c.name : id;
+            }).join(', ');
+            const modeText = searchMode === 'and' ? '[AND]' : '[OR]';
+            document.getElementById('resultsTitle').textContent = modeText + ' ' + conditionNames;
+
+            const resultsDiv = document.getElementById('searchResults');
+            const hasLstm = selectedConditions.includes('lstm_bullish');
+
+            if (hasLstm) {
+                resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>🧠 LSTM + 조건 검색 중...<br><small>모델 학습에 시간이 걸릴 수 있습니다</small></div>';
+            } else {
+                resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>조건 검색 중...</div>';
+            }
+
+            try {
+                const conditionIds = selectedConditions.join(',');
+                const url = `/api/screen/multi?conditions=${conditionIds}&mode=${searchMode}`;
+                console.log('Fetching:', url);
+
+                const res = await fetch(url);
+                const data = await res.json();
+                console.log('Response:', data);
+
+                if (data.error) {
+                    resultsDiv.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div>${data.error}</div>`;
+                    return;
+                }
+
+                // LSTM 포함 여부에 따라 다른 표시
+                if (data.has_lstm) {
+                    displayResultsWithLstm(data.results || []);
+                } else {
+                    displayResults(data.results || [], true);
+                }
+            } catch (e) {
+                console.error('Error:', e);
+                resultsDiv.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div>오류가 발생했습니다</div>';
+            }
+        }
+
+        function displayResultsWithLstm(results) {
+            const resultsDiv = document.getElementById('searchResults');
+            document.getElementById('resultsCount').textContent = `${results.length}개`;
+            searchResultCodes = results.map(s => s.code);
+            currentSearchResults = results;
+            document.getElementById('lstmAnalyzeBtn').disabled = true;
+            document.getElementById('exportBtn').disabled = results.length === 0;
+            document.getElementById('lstmResults').classList.add('hidden');
+
+            if (!results || results.length === 0) {
+                resultsDiv.innerHTML = '<div class="empty-state"><div class="empty-icon">🧠</div>조건에 맞는 종목이 없습니다</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = results.map(stock => {
+                const lstm = stock.lstm;
+                return `
+                <div class="lstm-item" onclick="selectStock('${stock.code}', '${stock.name}')">
+                    <div class="lstm-stock-info">
+                        <div class="stock-name">${stock.name}</div>
+                        <div class="stock-code">${stock.code}<span class="stock-market">${stock.market || 'KRX'}</span></div>
+                        <div style="font-size: 0.8rem;">${stock.price ? stock.price.toLocaleString() + '원' : ''}
+                            <span class="stock-change ${stock.change >= 0 ? 'up' : 'down'}">${stock.change >= 0 ? '▲' : '▼'}${Math.abs(stock.change_rate || 0).toFixed(2)}%</span>
+                        </div>
+                    </div>
+                    ${lstm ? `
+                    <div class="lstm-prediction">
+                        <div class="lstm-direction up">📈 상승</div>
+                        <div class="lstm-confidence">신뢰도: ${lstm.confidence}%</div>
+                        <div class="lstm-signal buy">${lstm.signal}</div>
+                    </div>
+                    ` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function displayLstmResults(results) {
+            const resultsDiv = document.getElementById('searchResults');
+            document.getElementById('resultsCount').textContent = `${results.length}개`;
+            searchResultCodes = results.map(s => s.code);
+            currentSearchResults = results;
+            document.getElementById('lstmAnalyzeBtn').disabled = true; // 이미 LSTM 결과이므로 비활성화
+            document.getElementById('exportBtn').disabled = results.length === 0;
+            document.getElementById('lstmResults').classList.add('hidden');
+
+            if (!results || results.length === 0) {
+                resultsDiv.innerHTML = '<div class="empty-state"><div class="empty-icon">🧠</div>상승 예측 종목이 없습니다</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = results.map(stock => `
+                <div class="lstm-item" onclick="selectStock('${stock.code}', '${stock.name}')">
+                    <div class="lstm-stock-info">
+                        <div class="stock-name">${stock.name}</div>
+                        <div class="stock-code">${stock.code}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">${stock.price ? stock.price.toLocaleString() + '원' : ''}</div>
+                    </div>
+                    <div class="lstm-prediction">
+                        <div class="lstm-direction up">📈 상승</div>
+                        <div class="lstm-confidence">신뢰도: ${stock.confidence}%</div>
+                        <div class="lstm-signal buy">${stock.signal}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectStock(code, name) {
+            currentCode = code;
+            currentName = name;
+            document.getElementById('detailName').textContent = name;
+            document.getElementById('detailCode').textContent = code;
+            showDetailSection();
+            loadQuote();
+        }
+
+        function showConditionSection() {
+            document.getElementById('conditionSection').classList.remove('hidden');
+            document.getElementById('detailSection').classList.add('hidden');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelector('.nav-item[data-nav="condition"]').classList.add('active');
+        }
+
+        function showDetailSection() {
+            document.getElementById('conditionSection').classList.add('hidden');
+            document.getElementById('detailSection').classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelector('.nav-item[data-nav="detail"]').classList.add('active');
+        }
+
+        function showDetailIfSelected() {
+            if (currentCode) showDetailSection();
+            else alert('종목을 먼저 선택해주세요');
+        }
+
+        document.querySelectorAll('.detail-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const section = tab.dataset.detail;
+                document.getElementById('quoteSection').classList.add('hidden');
+                document.getElementById('chartSection').classList.add('hidden');
+                document.getElementById('lstmSection').classList.add('hidden');
+                document.getElementById('newsSection').classList.add('hidden');
+                if (section === 'quote') { document.getElementById('quoteSection').classList.remove('hidden'); loadQuote(); }
+                else if (section === 'chart') { document.getElementById('chartSection').classList.remove('hidden'); loadChart(); }
+                else if (section === 'lstm') { document.getElementById('lstmSection').classList.remove('hidden'); loadLstm(); }
+                else if (section === 'news') { document.getElementById('newsSection').classList.remove('hidden'); loadNews(); }
+            });
+        });
+
+        async function loadQuote() {
+            const section = document.getElementById('quoteSection');
+            section.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            try {
+                const res = await fetch(`/api/info/${currentCode}`);
+                const data = await res.json();
+                const change = data.quote['전일대비'] || 0;
+                const changeRate = data.quote['등락률'] || 0;
+                const changeClass = change >= 0 ? 'up' : 'down';
+                const cap = data.market_cap['시가총액_억'];
+                const capStr = cap ? (cap >= 10000 ? (cap / 10000).toFixed(2) + '조원' : cap.toLocaleString() + '억원') : '-';
+                section.innerHTML = `
+                    <div class="quote-main">
+                        <div class="quote-price">${(data.quote['현재가'] || 0).toLocaleString()}원</div>
+                        <div class="quote-change ${changeClass}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toLocaleString()} (${changeRate >= 0 ? '+' : ''}${changeRate.toFixed(2)}%)</div>
+                    </div>
+                    <div class="quote-grid">
+                        <div class="quote-item"><span class="quote-label">시가</span><span class="quote-value">${(data.quote['시가'] || 0).toLocaleString()}</span></div>
+                        <div class="quote-item"><span class="quote-label">고가</span><span class="quote-value" style="color:var(--danger)">${(data.quote['고가'] || 0).toLocaleString()}</span></div>
+                        <div class="quote-item"><span class="quote-label">저가</span><span class="quote-value" style="color:var(--primary)">${(data.quote['저가'] || 0).toLocaleString()}</span></div>
+                        <div class="quote-item"><span class="quote-label">거래량</span><span class="quote-value">${(data.quote['거래량'] || 0).toLocaleString()}</span></div>
+                        <div class="quote-item"><span class="quote-label">PER</span><span class="quote-value">${data.fundamental['PER'] || '-'}</span></div>
+                        <div class="quote-item"><span class="quote-label">PBR</span><span class="quote-value">${data.fundamental['PBR'] || '-'}</span></div>
+                        <div class="quote-item"><span class="quote-label">시가총액</span><span class="quote-value">${capStr}</span></div>
+                        <div class="quote-item"><span class="quote-label">배당률</span><span class="quote-value">${data.fundamental['배당수익률'] || 0}%</span></div>
+                    </div>`;
+            } catch (e) { section.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div>오류</div>'; }
+        }
+
+        async function loadChart() {
+            try {
+                const res = await fetch(`/api/chart/${currentCode}?period=3m`);
+                const data = await res.json();
+                if (stockChart) stockChart.destroy();
+                stockChart = new Chart(document.getElementById('stockChart').getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: data.dates,
+                        datasets: [{ label: '종가', data: data.close, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.1)', fill: true, tension: 0.1, pointRadius: 0 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 6 } }, y: { ticks: { callback: v => v.toLocaleString() } } } }
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadNews() {
+            const section = document.getElementById('newsSection');
+            section.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            try {
+                const res = await fetch(`/api/news/${currentCode}?count=10`);
+                const data = await res.json();
+                if (!data.news || data.news.length === 0 || data.news[0].error) {
+                    section.innerHTML = '<div class="empty-state"><div class="empty-icon">📰</div>뉴스가 없습니다</div>';
+                    return;
+                }
+                section.innerHTML = data.news.map(n => `<div class="news-item"><div class="news-title">${n.title}</div><div class="news-meta">${n.source} | ${n.date}</div></div>`).join('');
+            } catch (e) { section.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div>오류</div>'; }
+        }
+
+        // LSTM 분석 및 내보내기용 데이터
+        let searchResultCodes = [];
+        let currentSearchResults = [];
+
+        function displayResults(results, showPrice = false) {
+            const resultsDiv = document.getElementById('searchResults');
+            document.getElementById('resultsCount').textContent = `${results.length}개`;
+
+            // LSTM 분석용 코드 저장
+            searchResultCodes = results.map(s => s.code);
+            currentSearchResults = results;
+            document.getElementById('lstmAnalyzeBtn').disabled = results.length === 0;
+            document.getElementById('exportBtn').disabled = results.length === 0;
+            document.getElementById('lstmResults').classList.add('hidden');
+
+            if (!results || results.length === 0) {
+                resultsDiv.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div>조건에 맞는 종목이 없습니다</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = results.map(stock => {
+                const priceHtml = showPrice && stock.price ? `
+                    <div class="stock-price">
+                        <div class="stock-current">${Number(stock.price).toLocaleString()}원</div>
+                        <div class="stock-change ${stock.change >= 0 ? 'up' : 'down'}">
+                            ${stock.change >= 0 ? '▲' : '▼'} ${Math.abs(stock.change_rate || 0).toFixed(2)}%
+                        </div>
+                    </div>` : '';
+                return `
+                    <div class="stock-item" onclick="selectStock('${stock.code}', '${stock.name}')">
+                        <div>
+                            <div class="stock-name">${stock.name}</div>
+                            <div class="stock-code">${stock.code}<span class="stock-market">${stock.market || 'KRX'}</span></div>
+                        </div>
+                        ${priceHtml}
+                    </div>`;
+            }).join('');
+        }
+
+        async function analyzeLstmBatch() {
+            if (searchResultCodes.length === 0) return;
+
+            const btn = document.getElementById('lstmAnalyzeBtn');
+            const resultsDiv = document.getElementById('searchResults');
+
+            btn.disabled = true;
+            btn.innerHTML = '🧠 분석 중...';
+            resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>🧠 LSTM 분석 중...<br><small>모델 학습에 시간이 걸릴 수 있습니다</small></div>';
+
+            try {
+                const codes = searchResultCodes.slice(0, 10).join(',');
+                const res = await fetch(`/api/lstm/batch?codes=${codes}`);
+                const data = await res.json();
+
+                if (data.results && data.results.length > 0) {
+                    document.getElementById('resultsTitle').textContent = '🧠 LSTM 분석 결과';
+                    document.getElementById('resultsCount').textContent = `${data.results.length}개`;
+
+                    resultsDiv.innerHTML = data.results.map(r => `
+                        <div class="lstm-item" onclick="selectStock('${r.code}', '${r.name}')">
+                            <div class="lstm-stock-info">
+                                <div class="stock-name">${r.name}</div>
+                                <div class="stock-code">${r.code}</div>
+                            </div>
+                            <div class="lstm-prediction">
+                                <div class="lstm-direction ${r.direction === '상승' ? 'up' : 'down'}">
+                                    ${r.direction === '상승' ? '📈 상승' : '📉 하락'}
+                                </div>
+                                <div class="lstm-confidence">신뢰도: ${r.confidence}%</div>
+                                <div class="lstm-signal ${r.signal === '매수' ? 'buy' : 'sell'}">${r.signal}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    resultsDiv.innerHTML = '<div class="empty-state"><div class="empty-icon">🤖</div>분석 결과가 없습니다</div>';
+                }
+            } catch (e) {
+                console.error(e);
+                resultsDiv.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div>분석 오류</div>';
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '🧠 LSTM 분석';
+        }
+
+        async function loadLstm() {
+            const section = document.getElementById('lstmSection');
+            section.innerHTML = '<div class="loading"><div class="spinner"></div>LSTM 분석 중...<br><small>모델 학습에 시간이 걸릴 수 있습니다</small></div>';
+
+            try {
+                const res = await fetch(`/api/lstm/analyze/${currentCode}`);
+                const data = await res.json();
+
+                if (data.error) {
+                    section.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div>${data.error}</div>`;
+                    return;
+                }
+
+                const p = data.prediction;
+                const prob = p.probability;
+                const isUp = p.direction === '상승';
+
+                section.innerHTML = `
+                    <div class="detail-lstm">
+                        <div style="font-size: 0.9rem; color: var(--text-muted);">LSTM 신경망 예측</div>
+                        <div class="lstm-big-direction ${isUp ? 'up' : 'down'}">
+                            ${isUp ? '📈 상승 예측' : '📉 하락 예측'}
+                        </div>
+                        <div class="lstm-prob-bar" style="--prob: ${100 - prob}%"></div>
+                        <div class="lstm-prob-labels">
+                            <span>하락 ${(100 - prob).toFixed(1)}%</span>
+                            <span>상승 ${prob.toFixed(1)}%</span>
+                        </div>
+                        <div class="lstm-info-grid">
+                            <div class="lstm-info-item">
+                                <div class="lstm-info-label">예측 방향</div>
+                                <div class="lstm-info-value" style="color: ${isUp ? 'var(--danger)' : 'var(--primary)'}">${p.direction}</div>
+                            </div>
+                            <div class="lstm-info-item">
+                                <div class="lstm-info-label">신뢰도</div>
+                                <div class="lstm-info-value">${p.confidence}%</div>
+                            </div>
+                            <div class="lstm-info-item">
+                                <div class="lstm-info-label">매매 신호</div>
+                                <div class="lstm-info-value" style="color: ${p.signal === '매수' ? 'var(--danger)' : 'var(--primary)'}">${p.signal}</div>
+                            </div>
+                            <div class="lstm-info-item">
+                                <div class="lstm-info-label">모델 상태</div>
+                                <div class="lstm-info-value" style="font-size: 0.9rem">${data.trained ? '새로 학습됨' : '저장된 모델'}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 16px; padding: 10px; background: var(--bg); border-radius: 8px; font-size: 0.75rem; color: var(--text-muted);">
+                            ⚠️ LSTM 예측은 참고용이며, 투자 결정의 유일한 기준이 되어서는 안 됩니다.
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                console.error(e);
+                section.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div>분석 오류</div>';
+            }
+        }
+
+        // 검색 결과 내보내기
+        function exportResults() {
+            if (currentSearchResults.length === 0) {
+                alert('내보낼 데이터가 없습니다.');
+                return;
+            }
+
+            const data = encodeURIComponent(JSON.stringify(currentSearchResults));
+            const url = `/api/export/csv?data=${data}`;
+
+            // 다운로드 트리거
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'stock_search.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>

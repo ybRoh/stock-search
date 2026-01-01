@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 로컬 설정
+*.log
+.env
+
+# 모델 파일 (용량 큼)
+*.pt
+*.pth
+
+# Android 빌드
+android/.gradle/
+android/app/build/
+android/build/
+android/gradle-8.0/
+android/gradle-8.0-bin.zip
+*.apk
